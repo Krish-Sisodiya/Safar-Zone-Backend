@@ -1,6 +1,11 @@
-# Step 1: Application ko build karna (Standard Maven image aur OpenJDK 25)
-FROM maven:3.9-openjdk-25-slim AS build
+# Step 1: OpenJDK 25 use karke Maven manually install karna aur build karna
+FROM openjdk:25-ea-slim AS build
 WORKDIR /app
+
+# Maven install karne ke liye required tools aur Maven khud install karein
+RUN apt-get update && apt-get install -y maven && apt-get clean
+
+# Project files copy karke build karein
 COPY . .
 RUN mvn clean package -DskipTests
 
