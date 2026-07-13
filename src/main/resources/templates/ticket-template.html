@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+
+<head>
+
+    <meta charset="UTF-8"/>
+
+    <style>
+
+        body{
+            font-family: Arial, sans-serif;
+            background:#eef3ff;
+            padding:30px;
+        }
+
+        .ticket{
+            width:100%;
+            background:white;
+            border-radius:30px;
+            overflow:hidden;
+            border:2px solid #dbe7ff;
+        }
+
+        .top{
+            background:#2F6BFF;
+            color:white;
+            padding:35px;
+        }
+
+        .logo{
+            font-size:38px;
+            font-weight:bold;
+            letter-spacing:2px;
+        }
+
+        .subtitle{
+            margin-top:8px;
+            font-size:16px;
+        }
+
+        .booking{
+            margin-top:25px;
+            font-size:18px;
+        }
+
+        .route-box{
+            background:white;
+            margin:30px;
+            border-radius:25px;
+            padding:30px;
+            border:1px dashed #b8cfff;
+        }
+
+        .route{
+            text-align:center;
+            font-size:34px;
+            font-weight:bold;
+            color:#2F6BFF;
+        }
+
+        .city{
+            font-size:20px;
+            color:#0A192F;
+        }
+
+        .section{
+            padding-left:30px;
+            padding-right:30px;
+            padding-bottom:25px;
+        }
+
+        .card{
+            background:#f7f9ff;
+            border-radius:20px;
+            padding:22px;
+            margin-bottom:20px;
+            border:1px solid #dce7ff;
+        }
+
+        .title{
+            font-size:24px;
+            font-weight:bold;
+            color:#2F6BFF;
+            margin-bottom:20px;
+        }
+
+        table{
+            width:100%;
+        }
+
+        td{
+            padding:10px 0;
+        }
+
+        .label{
+            color:#666;
+            font-size:15px;
+        }
+
+        .value{
+            color:#0A192F;
+            font-size:18px;
+            font-weight:bold;
+            text-align:right;
+        }
+
+        .price-box{
+            background:#2F6BFF;
+            margin:30px;
+            border-radius:25px;
+            padding:30px;
+            text-align:center;
+            color:white;
+        }
+
+        .price{
+            font-size:48px;
+            font-weight:bold;
+        }
+
+        .qr{
+            text-align:center;
+            margin-top:30px;
+        }
+
+        .qr img{
+            border:10px solid white;
+        }
+
+        .footer{
+            background:#0A192F;
+            color:white;
+            text-align:center;
+            padding:25px;
+            font-size:16px;
+        }
+
+        .status{
+            color:#00B894;
+            font-weight:bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="ticket">
+
+    <!-- TOP -->
+
+    <div class="top">
+
+        <div class="logo">
+            SAFAR ZONE
+        </div>
+
+        <div class="subtitle">
+            Premium Travel Ticket
+        </div>
+
+        <div class="booking">
+            Booking ID :
+            <span th:text="${bookingCode}"></span>
+        </div>
+
+    </div>
+
+    <!-- ROUTE -->
+
+    <div class="route-box">
+
+        <div style="text-align:center;">
+
+            <div class="city">
+                <span th:text="${fromLocation}"></span>
+            </div>
+
+            <div class="route">
+                ✈
+            </div>
+
+            <div class="city">
+                <span th:text="${toLocation}"></span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- PACKAGE -->
+
+    <div class="section">
+
+        <div class="card">
+
+            <div class="title">
+                Package Details
+            </div>
+
+            <table>
+
+                <tr>
+                    <td class="label">Package</td>
+                    <td class="value" th:text="${packageName}"></td>
+                </tr>
+
+                <tr>
+                    <td class="label">Trip Date</td>
+                    <td class="value" th:text="${tripDate}"></td>
+                </tr>
+
+                <tr>
+                    <td class="label">Trip Time</td>
+                    <td class="value" th:text="${tripTime}"></td>
+                </tr>
+
+                <tr>
+                    <td class="label">Seats</td>
+                    <td class="value" th:text="${seats}"></td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- TRAVELER -->
+
+        <div class="card">
+
+            <div class="title">
+                Traveler Details
+            </div>
+
+            <table>
+
+                <tr>
+                    <td class="label">Traveler Name</td>
+                    <td class="value" th:text="${travelerName}"></td>
+                </tr>
+
+                <tr>
+                    <td class="label">Email</td>
+                    <td class="value" th:text="${travelerEmail}"></td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- DRIVER -->
+
+        <div class="card">
+
+            <div class="title">
+                Driver Details
+            </div>
+
+            <table>
+
+                <tr>
+                    <td class="label">Driver</td>
+                    <td class="value" th:text="${driverName}"></td>
+                </tr>
+
+                <tr>
+                    <td class="label">Phone</td>
+                    <td class="value" th:text="${driverPhone}"></td>
+                </tr>
+
+            </table>
+
+        </div>
+
+        <!-- PAYMENT -->
+
+        <div class="card">
+
+            <div class="title">
+                Payment Details
+            </div>
+
+            <table>
+
+                <tr>
+                    <td class="label">Payment Status</td>
+                    <td class="value status"
+                        th:text="${paymentStatus}">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">Booking Ref</td>
+                    <td class="value"
+                        th:text="${bookingCode}">
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <!-- PRICE -->
+
+    <div class="price-box">
+
+        <div>
+            Total Paid
+        </div>
+
+        <div class="price">
+            ₹ <span th:text="${totalAmount}"></span>
+        </div>
+
+    </div>
+
+    <!-- QR -->
+
+    <div class="qr">
+
+        <img th:src="${qrCode}" width="220"/>
+
+        <p>
+            Scan QR for Verification
+        </p>
+
+    </div>
+
+    <!-- FOOTER -->
+
+    <div class="footer">
+
+        Thank You For Choosing Safar Zone ❤️
+
+    </div>
+
+</div>
+
+</body>
+
+</html>
+
