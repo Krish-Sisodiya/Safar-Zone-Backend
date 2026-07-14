@@ -67,18 +67,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ✅ 2. Skip public endpoints (NO auth required)
+        // ✅ 2. Skip public endpoints (NO auth required) - SAFELY
         if (isPublicEndpoint(requestUri)) {
             log.debug("✅ Public endpoint, skipping auth: {}", requestUri);
             chain.doFilter(request, response);
-            return;
+            return; // Ekdum perfect, bina response chhede return ho jao
         }
 
         // ✅ 3. Extract token from Authorization header
         String token = extractToken(request);
         if (token == null) {
             log.warn("⚠️ No token found in request: {} {}", requestMethod, requestUri);
-            sendUnauthorized(response, "Authentication token is missing");
+            // 🚨 DIRECT CRASH SE BACHNE KE LIYE: Phle check karo response commit toh nahi hua
+            if (!response.isCommitted()) {
+                sendUnauthorized(response, "Authentication token is missing");
+            }
             return;
         }
 
