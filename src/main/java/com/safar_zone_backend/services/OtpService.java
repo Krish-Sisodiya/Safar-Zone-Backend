@@ -33,7 +33,7 @@ public class OtpService {
     @Value("${app.otp.max-attempts-per-hour:5}") private int maxOtpAttemptsPerHour;
 
     // Cloud security bypass variables
-    @Value("${BREVO_API_KEY}") private String brevoApiKey;
+    @Value("${BREVO_API_KEY:no_key_found}") private String brevoApiKey;
     @Value("${spring.mail.username:no-reply@safarzone.com}") private String senderEmail;
     @Value("${app.base-url:https://safarzone.com}") private String baseUrl;
 
@@ -91,7 +91,7 @@ public class OtpService {
 
     @Transactional(readOnly = true)
     public OtpVerificationResult verifyOtp(String email, String otpCode) {
-        log.info("🔐 Verifying OTP for: {}", email);
+        log.info("🔐 Verifying O`TP for: {}", email);
 
         if (!isValidEmail(email) || !isValidOtpFormat(otpCode)) {
             return OtpVerificationResult.invalid(normalizeEmail(email));
