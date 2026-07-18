@@ -33,8 +33,10 @@ public class OtpService {
     @Value("${app.otp.max-attempts-per-hour:5}") private int maxOtpAttemptsPerHour;
 
     // Cloud security bypass variables
-    @Value("${BREVO_API_KEY:no_key_found}") private String brevoApiKey;
-    @Value("${spring.mail.username:no-reply@safarzone.com}") private String senderEmail;
+    @Value("${app.brevo.api-key:no_key_found}")
+    private String brevoApiKey;
+    @Value("${app.brevo.sender-email:no-reply@safarzone.com}")
+    private String senderEmail;
     @Value("${app.base-url:https://safarzone.com}") private String baseUrl;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
