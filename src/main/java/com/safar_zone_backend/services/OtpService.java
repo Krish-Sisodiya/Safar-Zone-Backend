@@ -6,15 +6,16 @@ import com.safar_zone_backend.repository.OtpRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.MailException;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -25,11 +26,14 @@ import java.util.regex.Pattern;
 public class OtpService {
 
     private final OtpRepository otpRepository;
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.otp.length:6}") private int otpLength;
     @Value("${app.otp.expiry-minutes:10}") private int otpExpiryMinutes;
     @Value("${app.otp.max-attempts-per-hour:5}") private int maxOtpAttemptsPerHour;
+
+    // Cloud security bypass variables
+    @Value("${BREVO_API_KEY}") private String brevoApiKey;
     @Value("${spring.mail.username:no-reply@safarzone.com}") private String senderEmail;
     @Value("${app.base-url:https://safarzone.com}") private String baseUrl;
 
@@ -38,7 +42,7 @@ public class OtpService {
     private static final Pattern OTP_PATTERN = Pattern.compile("^\\d+$");
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    // ✅ Public record for external use (AuthService can import this)
+    // ✅ Public record for external use (AuthService compatibility)
     public record OtpVerificationResult(
             boolean success,
             String reason,
@@ -81,13 +85,8 @@ public class OtpService {
                 .build();
         otpRepository.save(otp);
 
-        try {
-            sendOtpEmail(normalizedEmail, otpCode, role);
-            log.info("✅ OTP sent to {}", normalizedEmail);
-        } catch (MailException e) {
-            log.error("❌ Failed to send OTP email: {}", e.getMessage());
-            throw new RuntimeException("Failed to send verification email. Please try again.");
-        }
+        // ✅ Switch from SMTP to Secure Cloud REST API pipeline
+        sendOtpViaBrevoApi(normalizedEmail, otpCode, role);
     }
 
     @Transactional(readOnly = true)
@@ -130,26 +129,45 @@ public class OtpService {
         return String.format("%0" + otpLength + "d", secureRandom.nextInt(max));
     }
 
-    private void sendOtpEmail(String to, String otp, Role role) {
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setFrom(senderEmail);
-        msg.setTo(to);
-        msg.setSubject("🔐 Safar Zone - Verification Code");
-        msg.setText(String.format("""
-            Hello!
-            
-            Your Safar Zone verification code (%s) is:
-            
-            🔑 %s
-            
-            Expires in %d minutes.
-            
-            Ignore if not requested.
-            
-            Safar Zone Team 🚗✈️
-            %s
-            """, role != null ? role.name() : "User", otp, otpExpiryMinutes, baseUrl));
-        mailSender.send(msg);
+    private void sendOtpViaBrevoApi(String to, String otp, Role role) {
+        String url = "https://api.brevo.com/v3/smtp/email";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+
+        String roleName = role != null ? role.name() : "User";
+        String htmlMessage = String.format("""
+            <h3>Hello %s!</h3>
+            <p>Your Safar Zone verification code is:</p>
+            <h2 style="color: #4A90E2; letter-spacing: 2px;">🔑 %s</h2>
+            <p>Expires in <b>%d minutes</b>.</p>
+            <p>Ignore if not requested.</p>
+            <hr>
+            <p style="font-size: 12px; color: #888;">Safar Zone Team 🚗✈️<br><a href="%s">%s</a></p>
+            """, roleName, otp, otpExpiryMinutes, baseUrl, baseUrl);
+
+        Map<String, Object> body = Map.of(
+                "sender", Map.of("name", "Safar Zone", "email", senderEmail),
+                "to", List.of(Map.of("email", to)),
+                "subject", "🔐 Safar Zone - Verification Code",
+                "htmlContent", htmlMessage
+        );
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+            if (response.getStatusCode() == HttpStatus.CREATED || response.getStatusCode() == HttpStatus.OK) {
+                log.info("✅ OTP email sent successfully via API to {}", to);
+            } else {
+                log.error("❌ Brevo API returned status: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to send email via Brevo API");
+            }
+        } catch (Exception e) {
+            log.error("❌ REST API Email failed: {}", e.getMessage());
+            throw new RuntimeException("Failed to send verification email. Please try again.");
+        }
     }
 
     private void validateEmail(String email) {
