@@ -35,7 +35,7 @@ public class OtpService {
     // Cloud security bypass variables
     @Value("${app.brevo.api-key:no_key_found}")
     private String brevoApiKey;
-    @Value("${app.brevo.sender-email:no-reply@safarzone.com}")
+    @Value("${app.brevo.sender-email:masterkrish812@gmail.com}")
     private String senderEmail;
     @Value("${app.base-url:https://safarzone.com}") private String baseUrl;
 
