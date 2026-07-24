@@ -50,111 +50,73 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String requestUri = request.getRequestURI();
         String requestMethod = request.getMethod();
 
-        // ✅ 1. DEBUG: Log incoming request
-        log.debug("🔍 Filtering request: {} {}", requestMethod, requestUri);
-
-        // ✅ SKIP WEBSOCKET ENDPOINTS
-        if (
-                requestUri.startsWith("/chat") ||
-                        requestUri.startsWith("/topic") ||
-                        requestUri.startsWith("/app")
-        ) {
-
-            log.debug("✅ WebSocket endpoint, skipping JWT filter: {}", requestUri);
-
+        // ✅ 0. CRITICAL FIX: Direct bypass for CORS Preflight (OPTIONS) requests
+        if ("OPTIONS".equalsIgnoreCase(requestMethod)) {
+            response.setStatus(HttpServletResponse.SC_OK);
             chain.doFilter(request, response);
-
             return;
         }
 
-        // ✅ 2. Skip public endpoints (NO auth required) - SAFELY
+        log.debug("🔍 Filtering request: {} {}", requestMethod, requestUri);
+
+        // ✅ SKIP WEBSOCKET ENDPOINTS
+        if (requestUri.startsWith("/chat") || requestUri.startsWith("/topic") || requestUri.startsWith("/app")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // ✅ 2. Skip public endpoints (NO auth required)
         if (isPublicEndpoint(requestUri)) {
             log.debug("✅ Public endpoint, skipping auth: {}", requestUri);
             chain.doFilter(request, response);
-            return; // Ekdum perfect, bina response chhede return ho jao
+            return;
         }
 
         // ✅ 3. Extract token from Authorization header
         String token = extractToken(request);
         if (token == null) {
             log.warn("⚠️ No token found in request: {} {}", requestMethod, requestUri);
-            // 🚨 DIRECT CRASH SE BACHNE KE LIYE: Phle check karo response commit toh nahi hua
             if (!response.isCommitted()) {
                 sendUnauthorized(response, "Authentication token is missing");
             }
             return;
         }
 
-        // ✅ DEBUG: Log token presence (not the token itself for security)
-        log.debug("🔑 Token present in request: {} {}", requestMethod, requestUri);
-
-        // ✅ 4. Validate token using JwtUtil.ValidationResult
+        // ✅ 4. Validate token
         JwtUtil.ValidationResult result = jwtUtil.validateToken(token);
         if (!result.isValid()) {
-            log.warn("⚠️ Invalid token: {} for URI: {} {}",
-                    result.errorMessage(), requestMethod, requestUri);
             sendUnauthorized(response, "Invalid or expired token: " + result.errorMessage());
             return;
         }
 
-        // ✅ DEBUG: Token is valid, extract claims
-        log.debug("✅ Token validated successfully for URI: {} {}", requestMethod, requestUri);
-
-        // ✅ 5. Extract claims from validated token WITH DETAILED LOGGING
+        // ✅ 5. Extract claims
         String userId = jwtUtil.extractUserId(token);
         String email = jwtUtil.extractEmail(token);
         String roleString = jwtUtil.extractRole(token);
 
-        // ✅ DEBUG: Log extracted claims (CRITICAL for debugging 403 errors)
-        log.debug("📋 Extracted token claims:");
-        log.debug("   • userId: '{}'", userId != null ? userId : "NULL");
-        log.debug("   • email: '{}'", email != null ? email : "NULL");
-        log.debug("   • role (raw string): '{}'", roleString != null ? roleString : "NULL");
-
-        // ✅ 6. Validate required claims (userId & email are mandatory)
         if (userId == null || userId.isBlank() || email == null || email.isBlank()) {
-            log.error("🚫 Token missing required claims (userId/email) for URI: {} {}",
-                    requestMethod, requestUri);
             sendUnauthorized(response, "Invalid token: missing user information");
             return;
         }
 
-        // ✅ 7. Parse role - REJECT invalid instead of defaulting (SECURITY FIX)
+        // ✅ 6. Parse role
         Role role;
         try {
             role = parseRole(roleString);
-            log.debug("✅ Role parsed successfully: {} (from: '{}')", role, roleString);
         } catch (SecurityException e) {
-            log.error("🚫 Role parsing failed for user {} (email: {}): {}",
-                    userId, email, e.getMessage());
             sendUnauthorized(response, "Invalid token: " + e.getMessage());
             return;
         }
 
-        // ✅ 8. Create CustomUserDetails with parsed Role
         CustomUserDetails userDetails = new CustomUserDetails(userId, email, role);
-        log.debug("👤 Created CustomUserDetails: userId={}, email={}, role={}",
-                userId, email, role);
+        var authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()));
 
-        // ✅ 9. Create Spring Security authorities - CRITICAL: Must match hasRole() format
-        // Spring Security's hasRole("DRIVER") expects authority: "ROLE_DRIVER"
-        var authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + role.name())
-        );
-        log.debug("🔐 Created authority: ROLE_{} for user {}", role.name(), userId);
-
-        // ✅ 10. Create authentication object and set in SecurityContext
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // ✅ FINAL: Log successful authentication
-        log.info("✅ Authenticated: {} (email: {}, role: {}) for {} {}",
-                userId, email, role, requestMethod, requestUri);
-
-        // ✅ Proceed with the request
         chain.doFilter(request, response);
     }
 
